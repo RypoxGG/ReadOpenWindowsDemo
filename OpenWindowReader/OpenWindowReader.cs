@@ -21,11 +21,29 @@ namespace OpenWindowReader
         public static IEnumerable<WindowDetail> GetOpenWindowsOfProcess(int processId)
         {
             var process = Process.GetProcessById(processId);
+            return GetOpenWindowsOfProcess(process);
+        }
+
+        public static IEnumerable<WindowDetail> GetOpenWindowsOfProcess(string processName)
+        {
+            var processes = Process.GetProcessesByName(processName);
+            foreach (var process in processes)
+            {
+               var windowDetails = GetOpenWindowsOfProcess(process);
+                foreach (var windowDetail in windowDetails)
+                {
+                    yield return windowDetail;
+                }
+            }
+        }
+
+        public static IEnumerable<WindowDetail> GetOpenWindowsOfProcess(Process process)
+        {
             var windowDetails = new List<WindowDetail>();
             var windowDetailsHandle = GCHandle.Alloc(windowDetails);
             var callback = new EnumThreadWndProc((hwnd, lParam) =>
             {
-                if(GCHandle.FromIntPtr(lParam).Target is List<WindowDetail> list)
+                if (GCHandle.FromIntPtr(lParam).Target is List<WindowDetail> list)
                 {
                     var capacity = GetWindowTextLength(hwnd);
                     var stringBuilder = new StringBuilder(capacity * 2);
@@ -34,7 +52,7 @@ namespace OpenWindowReader
                     {
                         WindowHandle = hwnd,
                         WindowTitle = stringBuilder.ToString(),
-                        Pid = processId
+                        Pid = process.Id
                     };
                     list.Add(windowDetail);
                 }
